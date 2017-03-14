@@ -16,7 +16,7 @@ index_html = """
 <body>
 <h1>Musicazoo</h1>
 <p>Use this form to queue new videos:</p>
-<input type="text" id="youtube_id" placeholder="youtube ID here"> <button id="submit">Queue</button>
+<input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button>
 <p>Queued items:</p>
 <ul id="queue">
 <li>Loading...</li>
