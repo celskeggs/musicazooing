@@ -2,6 +2,8 @@ Runs on debian 8.
 
 == systemd ==
 
+[ ] nginx: connects port 80 to webserver
+
 [x] redis: data storage and persistence
 
 [x] webserver: hosts HTTP, reads from redis and sticks data in redis

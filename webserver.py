@@ -150,7 +150,7 @@ class Musicazoo:
 	def search(self, q):
 		return query_search(q)
 
-cherrypy.config.update({'server.socket_port': 80})
+cherrypy.config.update({'server.socket_port': 8000})
 
 cherrypy.tree.mount(Musicazoo(), "/")
 

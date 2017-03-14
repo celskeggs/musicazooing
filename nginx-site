@@ -1,0 +1,9 @@
+# goes in sites-available
+
+server {
+	listen 80 musicazoo;
+	listen [::]:80 musicazoo;
+	location / {
+		proxy_pass http://localhost:8000;
+	}
+}
