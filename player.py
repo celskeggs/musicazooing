@@ -8,7 +8,7 @@ import subprocess
 current_subprocess = None
 current_uuid = None
 
-DATA_DIR = "/tmp/musicazoo_videos"
+DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
 
 redis = redis.Redis()
 
@@ -63,7 +63,8 @@ while True:
 	removed_uuid = check_on_process()
 	if removed_uuid and quent and removed_uuid == json.loads(quent.decode())["uuid"]:
 		print("DEQUEUE")
-		redis.lpop("musicaqueue")
+		ent = redis.lpop("musicaqueue")
+		redis.rpush("musicaudit", "dequeued entry %s at %s because process ended" % (ent, time.ctime()));
 		quent = redis.lindex("musicaqueue", 0)
 	if quent:
 		quent = json.loads(quent.decode())

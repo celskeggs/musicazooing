@@ -5,7 +5,7 @@ import json
 import os
 import subprocess
 
-DATA_DIR = "/tmp/musicazoo_videos"
+DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
 YOUTUBE_DL = os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl")
 
 if not os.path.isdir(DATA_DIR):

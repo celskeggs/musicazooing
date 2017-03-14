@@ -1,4 +1,5 @@
 import cherrypy
+import time
 import os
 import redis
 import json
@@ -12,11 +13,20 @@ index_html = """
 <html>
 <head>
 <title>Musicazoo WIP</title>
+<style>
+body {
+	color: #f3fde1;
+	background-color: #406873;
+}
+</style>
 </head>
 <body>
 <h1>Musicazoo</h1>
 <p>Use this form to queue new videos:</p>
-<input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button>
+<input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button> <button id="suggest">Suggest</button>
+<ul id="suggestions">
+<li>no suggestions</li>
+</ul>
 <p>Queued items:</p>
 <ul id="queue">
 <li>Loading...</li>
@@ -45,8 +55,40 @@ index_html = """
     var youtube_id = document.getElementById("youtube_id");
     var submit = document.getElementById("submit");
     var queue = document.getElementById("queue");
+    var suggestions = document.getElementById("suggestions");
+    var suggest = document.getElementById("suggest");
+    function clear_suggestions() {
+      suggestions.innerHTML = "";
+    }
+    function render_suggestions(results) {
+      var outline = "";
+      for (var i = 0; i < results.length; i++) {
+        outline += "<li><span></span><button>queue</button></li>";
+      }
+      suggestions.innerHTML = outline;
+      for (var i = 0; i < results.length; i++) {
+        suggestions.children[i].children[0].textContent = results[i].title;
+        suggestions.children[i].children[1].onclick = function() {
+          youtube_id.value = this;
+          suggestions.innerHTML = "";
+          submit.onclick();
+        }.bind(results[i].ytid);
+      }
+    }
+    suggest.onclick = function() {
+      if (suggest.disabled) { return; }
+      suggest.disabled = true;
+      json_request(function(data) {
+        render_suggestions(data);
+        suggest.disabled = false;
+      }, function(err) {
+        console.log(err);
+        suggest.disabled = false;
+      }, "/search?q=" + encodeURIComponent(youtube_id.value));
+    };
     youtube_id.onkeypress = function(e) {
       if (!e) { e = window.event; }
+      clear_suggestions();
       var keyCode = e.keyCode || e.which;
       if (keyCode == 13) {
         submit.onclick();
@@ -97,7 +139,18 @@ index_html = """
 
 def query_search(query):
 	try:
-		return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--", "ytsearch:%s" % query], cwd="/tmp").strip().decode()
+		return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--", "%s" % query], cwd="/tmp").strip().decode()
+	except:
+		try:
+			return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--", "ytsearch:%s" % query], cwd="/tmp").strip().decode()
+		except:
+			return None
+
+def query_search_multiple(query, n=5):
+	try:
+		lines = subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--get-title", "--", "ytsearch%d:%s" % (n, query)], cwd="/tmp").strip().decode().split("\n")
+		assert len(lines) % 2 == 0
+		return [{"title": ai, "ytid": bi} for ai, bi in zip(lines[::2], lines[1::2])]
 	except:
 		return None
 
@@ -142,13 +195,14 @@ class Musicazoo:
 	def delete(self, uuid):
 		found = self.find(uuid)
 		while found is not None:
-			redis.lrem("musicaqueue", found)
+			count = redis.lrem("musicaqueue", found)
+			redis.rpush("musicaudit", "removed entry for %s at %s because of deletion request" % (found, time.ctime()))
 			found = self.find(uuid)
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
 	def search(self, q):
-		return query_search(q)
+		return query_search_multiple(q)
 
 cherrypy.config.update({'server.socket_port': 8000})
 
