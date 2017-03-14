@@ -1,0 +1,47 @@
+Runs on debian 8.
+
+== systemd ==
+
+[x] redis: data storage and persistence
+
+[x] webserver: hosts HTTP, reads from redis and sticks data in redis
+	uses webapp2
+
+[x] downloader: downloads youtube videos, talks with redis, writes into fixed folder
+	uses youtube-dl
+	"~/.local/bin/youtube-dl"
+
+[ ] yt-updater: updates youtube-dl
+	uses pip install --user
+
+[ ] cleaner: talks with redis, deletes data from fixed folder
+
+== runs in the desktop session ==
+
+[ ] player: plays queued videos, talks with redis, reads out of fixed folder
+	uses mplayer
+
+
+INSTALLATION:
+* Install Debian 8
+  - hostname: musicazoo
+  - domain name: .mit.edu
+  - no root password
+  - user: musicazoo
+  - password: musicazoo (temporary)
+  - time zone: eastern
+  - partitioning: guided
+  - mirror country: united states
+  - mirror: debian.csail.mit.edu
+  - no http proxy
+  - report statistics
+  - select options: Debian / LXDE
+    - add SSH server if you want
+  - install grub: /dev/sda
+* Disable unnecessary services
+  - systemctl stop/disable avahi-daemon avahi-daemon.socket ModemManager udisks2 wicd
+* Install and enable redis
+  - apt-get install redis-server
+* Create and switch to new user "musicazoo"
+* git clone this repository
+* 
