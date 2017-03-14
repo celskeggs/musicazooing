@@ -1,0 +1,8 @@
+[Unit]
+Description=musicazoo downloader service
+
+[Service]
+ExecStart=/usr/bin/python3 DIR/downloader.py
+
+[Install]
+WantedBy=default.target

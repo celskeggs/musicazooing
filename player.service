@@ -1,0 +1,8 @@
+[Unit]
+Description=musicazoo player service
+
+[Service]
+ExecStart=/usr/bin/python3 DIR/player.py
+
+[Install]
+WantedBy=default.target
