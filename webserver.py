@@ -150,4 +150,9 @@ class Musicazoo:
 	def search(self, q):
 		return query_search(q)
 
-cherrypy.quickstart(Musicazoo())
+cherrypy.config.update({'server.socket_port': 80})
+
+cherrypy.tree.mount(Musicazoo(), "/")
+
+cherrypy.engine.start()
+cherrypy.engine.block()
