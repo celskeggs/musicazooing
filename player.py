@@ -18,6 +18,13 @@ def sanitize(ytid):
 def path_for(ytid):
 	return os.path.join(DATA_DIR, sanitize(ytid) + ".mp4")
 
+def get_env():
+	env = dict(os.environ)
+	env["DISPLAY"] = ":0.0"
+	return env
+
+subprocess.check_call([os.path.join(os.getenv("HOME"), ".screenlayout/musicazoo.sh"], env=get_env())
+
 def start_playing(uuid, ytid):
 	global current_uuid, current_subprocess
 	if current_uuid is not None:
@@ -25,7 +32,7 @@ def start_playing(uuid, ytid):
 	assert current_subprocess is None
 	if os.path.exists(path_for(ytid)):
 		current_uuid = uuid
-		current_subprocess = subprocess.Popen(["mplayer", path_for(ytid)]) # -fs
+		current_subprocess = subprocess.Popen(["mplayer", path_for(ytid), "-fs", "--xineramascreen=1"], env=get_env())
 
 def stop_playing():
 	global current_uuid, current_subprocess
