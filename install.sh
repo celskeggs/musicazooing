@@ -10,7 +10,7 @@ do
 	cat $HERE/$x | sed "s|DIR|$HERE|" >$HOME/.config/systemd/user/$x
 done
 
-pip install --user --upgrade cherrypy youtube-dl redis
+pip3 install --user --upgrade cherrypy youtube-dl redis
 
 sudo systemctl start redis-server
 systemctl daemon-reload --user
