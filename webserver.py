@@ -1,14 +1,13 @@
 import cherrypy
 import os
 import redis
-import jinja2
 import json
 import uuid
 import subprocess
 
 redis = redis.Redis()
 
-index_html = jinja2.Template("""
+index_html = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -94,7 +93,7 @@ index_html = jinja2.Template("""
 </script>
 </body>
 </html>
-""")
+"""
 
 def query_search(query):
 	try:
@@ -121,7 +120,7 @@ class Musicazoo:
 	@cherrypy.expose
 	def index(self):
 		elems = self.elems()
-		return index_html.render(queue=elems, titles=self.titles(set(elem["ytid"] for elem in elems)))
+		return index_html
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
