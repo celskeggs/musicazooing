@@ -23,7 +23,7 @@ def get_env():
 	env["DISPLAY"] = ":0.0"
 	return env
 
-subprocess.check_call([os.path.join(os.getenv("HOME"), ".screenlayout/musicazoo.sh"], env=get_env())
+subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"), env=get_env())
 
 def start_playing(uuid, ytid):
 	global current_uuid, current_subprocess
