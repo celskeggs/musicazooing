@@ -103,7 +103,7 @@ def query_search(query):
 
 class Musicazoo:
 	def elems(self):
-		return [json.loads(ent) for ent in redis.lrange("musicaqueue", 0, -1)]
+		return [json.loads(ent.decode()) for ent in redis.lrange("musicaqueue", 0, -1)]
 
 	def titles(self, for_ytids):
 		mapping = {}
@@ -113,7 +113,7 @@ class Musicazoo:
 		return mapping
 
 	def find(self, uuid):
-		found = [ent for ent in redis.lrange("musicaqueue", 0, -1) if json.loads(ent)["uuid"] == uuid]
+		found = [ent for ent in redis.lrange("musicaqueue", 0, -1) if json.loads(ent.decode())["uuid"] == uuid]
 		assert len(found) <= 1
 		return found[0] if found else None
 

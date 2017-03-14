@@ -19,7 +19,7 @@ while redis.lpop("musicaload") is not None:
 	pass
 
 for ent in redis.lrange("musicaqueue", 0, -1):
-	redis.rpush("musicaload", json.loads(ent)["ytid"])
+	redis.rpush("musicaload", json.loads(ent.decode())["ytid"])
 
 def sanitize(ytid):
 	print("given", ytid)

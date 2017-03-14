@@ -54,12 +54,12 @@ def check_on_process():
 while True:
 	quent = redis.lindex("musicaqueue", 0)
 	removed_uuid = check_on_process()
-	if removed_uuid and quent and removed_uuid == json.loads(quent)["uuid"]:
+	if removed_uuid and quent and removed_uuid == json.loads(quent.decode())["uuid"]:
 		print("DEQUEUE")
 		redis.lpop("musicaqueue")
 		quent = redis.lindex("musicaqueue", 0)
 	if quent:
-		quent = json.loads(quent)
+		quent = json.loads(quent.decode())
 		if quent["uuid"] != current_uuid:
 			start_playing(quent["uuid"], quent["ytid"])
 	elif current_uuid is not None:
