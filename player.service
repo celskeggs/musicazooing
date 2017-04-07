@@ -3,6 +3,7 @@ Description=musicazoo player service
 
 [Service]
 ExecStart=/usr/bin/python3 DIR/player.py
+Restart=always
 
 [Install]
 WantedBy=default.target

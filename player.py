@@ -64,11 +64,13 @@ while True:
 	if removed_uuid and quent and removed_uuid == json.loads(quent.decode())["uuid"]:
 		print("DEQUEUE")
 		ent = redis.lpop("musicaqueue")
+		redis.set("musicatime.%s" % json.loads(quent.decode())["ytid"], time.time())
 		redis.rpush("musicaudit", "dequeued entry %s at %s because process ended" % (ent, time.ctime()));
 		quent = redis.lindex("musicaqueue", 0)
 	if quent:
 		quent = json.loads(quent.decode())
 		if quent["uuid"] != current_uuid:
+			redis.set("musicatime.%s" % quent["ytid"], time.time())
 			start_playing(quent["uuid"], quent["ytid"])
 	elif current_uuid is not None:
 		stop_playing()

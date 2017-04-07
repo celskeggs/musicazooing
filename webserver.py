@@ -1,4 +1,5 @@
 import cherrypy
+import random
 import time
 import os
 import redis
@@ -24,7 +25,7 @@ body {
 <h1>Musicazoo</h1>
 <p>Volume: <button id="sub">-</button><span id="vol">loading</span><button id="add">+</button></p>
 <p>Use this form to queue new videos:</p>
-<input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button> <button id="suggest">Suggest</button>
+<input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button> <button id="suggest">Search</button> <button id="random">Random</button>
 <ul id="suggestions">
 </ul>
 <p>Queued items:</p>
@@ -60,6 +61,7 @@ body {
     var add = document.getElementById("add");
     var sub = document.getElementById("sub");
     var vol = document.getElementById("vol");
+    var random = document.getElementById("random");
     function clear_suggestions() {
       suggestions.innerHTML = "";
     }
@@ -78,6 +80,11 @@ body {
       if (current_volume !== null) {
         set_volume(current_volume - 5);
       }
+    };
+    random.onclick = function() {
+      if (random.disabled) { return; }
+      random.disabled = true;
+      json_request(function() { random.disabled=false; }, function(err) { random.disabled = false; console.log(err); }, "/random");
     };
     function reorder(uuid, direction) {
       json_request(function() {}, default_err, "/reorder?uuid=" + encodeURIComponent(uuid) + "&dir=" + encodeURIComponent("" + direction));
@@ -175,10 +182,12 @@ body {
 </html>
 """
 
-def query_search(query):
+def query_search(query, search=True):
 	try:
 		return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--", "%s" % query], cwd="/tmp").strip().decode()
 	except:
+		if not search:
+			return None
 		try:
 			return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--", "ytsearch:%s" % query], cwd="/tmp").strip().decode()
 		except:
@@ -238,6 +247,9 @@ class Musicazoo:
 			return json.dumps({"success": False})
 		redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
 		redis.rpush("musicaload", youtube_id)
+		redis.incr("musicacommon.%s" % youtube_id)
+		redis.sadd("musicacommonset", youtube_id)
+		redis.set("musicatime.%s" % youtube_id, time.time())
 		return {"success": True}
 
 	@cherrypy.expose
@@ -297,6 +309,48 @@ class Musicazoo:
 			set_volume(int(vol))
 		except ValueError:
 			pass
+
+	@cherrypy.expose
+	@cherrypy.tools.json_out()
+	def top(self):
+		members = redis.smembers("musicacommonset")
+		frequency = [(member, redis.get("musicacommon.%s" % member)) for member in members]
+		frequency.sort(reverse=True, key=lambda x: x[1])
+		return frequency
+
+	@cherrypy.expose
+	@cherrypy.tools.json_out()
+	def top(self):
+		members = [x.decode() for x in redis.smembers("musicacommonset")]
+		frequencies = map(int,redis.mget(*["musicacommon.%s" % member for member in members]))
+		titles = [x.decode() if x else "%s (loading)" % member for member, x in zip(members, redis.mget(*["musicatitle.%s" % member for member in members]))]
+		frequency = list(zip(members, titles, frequencies))
+		frequency.sort(reverse=True, key=lambda x: x[2])
+		return frequency
+
+	@cherrypy.expose
+	@cherrypy.tools.json_out()
+	def random(self):
+		youtube_ids = redis.srandmember("musicacommonset", 30)
+		if not youtube_ids:
+			return {"success": False}
+		nonrecent = []
+		total = 0
+		for youtube_id in youtube_ids:
+			youtube_id = youtube_id.decode()
+			ltime = redis.get("musicatime.%s" % youtube_id)
+			if ltime is None or time.time() - (float(ltime.decode()) or 0) >= 3600:
+				for i in range(int(redis.get("musicacommon.%s" % youtube_id).decode()) or 1):
+					nonrecent.append(youtube_id)
+		if not youtube_ids:
+			return {"success": False}
+		youtube_id = query_search(random.choice(nonrecent), search=False) if youtube_id else None
+		if not youtube_id:
+			return {"success": False}
+		redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
+		redis.rpush("musicaload", youtube_id)
+		redis.set("musicatime.%s" % youtube_id, time.time())
+		return {"success": True, "ytid": youtube_id}
 
 cherrypy.config.update({'server.socket_port': 8000})
 
