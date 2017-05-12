@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""
+mz: Handly script for interacting with Musicazoo from the command line
+"""
+from urllib.request import urlopen
+from urllib.parse import quote
+import json
+import sys
+
+def get_status():
+	return json.loads(urlopen("http://musicazoo.mit.edu/list").read().decode("utf-8"))
+
+def prettyprint_listing():
+	status = get_status()
+	listing = status["listing"]
+	titles = status["titles"]
+	pretty_listing = [
+		titles[item['ytid']] if item['ytid'] in titles and titles[item['ytid']] is not None
+		else "{} (loading)".format(item['ytid'])
+		for item in listing
+	]
+	return "\n".join(pretty_listing) if len(pretty_listing) > 0 else "(Queue is empty.)"
+
+def enqueue(query):
+	response = json.loads(urlopen("http://musicazoo.mit.edu/enqueue?youtube_id={}".format(quote(query)), data=b"").read().decode("utf-8"))
+	return response["success"]
+
+def delete(uuid):
+	urlopen("http://musicazoo.mit.edu/delete?uuid={}".format(uuid), data=b"")
+
+def set_volume(vol):
+	urlopen("http://musicazoo.mit.edu/setvolume?vol={}".format(vol), data=b"")
+
+USAGE = """Usage:
+mz <youtube search term>: enqueue a video
+mz q / mz queue / mz list: show queue
+mz vol / mz volume: get volume
+mz vol <x> / mz volume <x>: set volume to x
+mz stfu / mz skip: delete currently playing video from queue
+mz status: get raw json blob with listing and video titles (for debugging)
+"""
+if __name__ == "__main__":
+	if len(sys.argv) < 2:
+		print(USAGE)
+	elif sys.argv[1] in ["status"]:
+		print(get_status())
+	elif sys.argv[1] in ["q", "queue", "list"]:
+		print(prettyprint_listing())
+	elif sys.argv[1] in ["volume", "vol"]:
+		if len(sys.argv) == 2:
+			print(get_status()["volume"])
+		else:
+			set_volume(sys.argv[2])
+	elif sys.argv[1] in ["stfu", "skip"]:
+		delete(get_status()["listing"][0]["uuid"])
+	else:
+		enqueue(" ".join(sys.argv[1:]))
