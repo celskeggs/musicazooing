@@ -184,24 +184,26 @@ body {
 
 def query_search(query, search=True):
 	try:
-		return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--", "%s" % query], cwd="/tmp").strip().decode()
+		return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--no-playlist", "--get-id", "--", "%s" % query], cwd="/tmp").strip().decode()
 	except:
 		if not search:
 			return None
 		try:
-			return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--", "ytsearch:%s" % query], cwd="/tmp").strip().decode()
+			return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--no-playlist", "--get-id", "--", "ytsearch:%s" % query], cwd="/tmp").strip().decode()
 		except:
 			return None
 
 def query_search_multiple(query, n=5):
 	try:
-		lines = subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--get-id", "--get-title", "--", "ytsearch%d:%s" % (n, query)], cwd="/tmp").strip().decode().split("\n")
+		lines = subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--no-playlist", "--get-id", "--get-title", "--", "ytsearch%d:%s" % (n, query)], cwd="/tmp").strip().decode().split("\n")
 		assert len(lines) % 2 == 0
 		return [{"title": ai, "ytid": bi} for ai, bi in zip(lines[::2], lines[1::2])]
 	except:
 		return None
 
-def get_volume():
+VOL_SCALE = 0.9
+
+def raw_get_volume():
 	try:
 		elems = subprocess.check_output(["/usr/bin/amixer", "get", "Master"]).decode().split("[")
 		elems = [e.split("]")[0] for e in elems]
@@ -211,12 +213,22 @@ def get_volume():
 	except:
 		return None
 
-def set_volume(volume):
+def get_volume():
+	vol = raw_get_volume()
+	if vol is None:
+		return None
+	else:
+		return min(100, int(vol / VOL_SCALE))
+
+def set_raw_volume(volume):
 	try:
 		volume = min(100, max(0, volume))
 		subprocess.check_call(["/usr/bin/amixer", "set", "Master", "--", "%d%%" % volume])
 	except:
 		pass
+
+def set_volume(volume):
+	set_raw_volume(min(100, volume * VOL_SCALE))
 
 class Musicazoo:
 	def elems(self):
@@ -305,18 +317,11 @@ class Musicazoo:
 
 	@cherrypy.expose
 	def setvolume(self, vol):
+		vol = min(get_volume() + 5, int(vol))
 		try:
-			set_volume(int(vol))
+			set_volume(vol)
 		except ValueError:
 			pass
-
-	@cherrypy.expose
-	@cherrypy.tools.json_out()
-	def top(self):
-		members = redis.smembers("musicacommonset")
-		frequency = [(member, redis.get("musicacommon.%s" % member)) for member in members]
-		frequency.sort(reverse=True, key=lambda x: x[1])
-		return frequency
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
