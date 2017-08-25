@@ -201,14 +201,14 @@ def query_search_multiple(query, n=5):
 	except:
 		return None
 
-VOL_SCALE = 0.9
+VOL_SCALE = 0.7
 
 def raw_get_volume():
 	try:
 		elems = subprocess.check_output(["/usr/bin/amixer", "get", "Master"]).decode().split("[")
 		elems = [e.split("]")[0] for e in elems]
 		elems = [e for e in elems if e.endswith("%")]
-		assert len(elems) == 1 and elems[0][-1] == "%"
+		assert len(elems) in (1, 2) and elems[0][-1] == "%"
 		return int(elems[0][:-1], 10)
 	except:
 		return None
