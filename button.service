@@ -1,0 +1,9 @@
+[Unit]
+Description=musicazoo button service
+
+[Service]
+ExecStart=/usr/bin/python3 DIR/button.py
+Restart=always
+
+[Install]
+WantedBy=default.target
