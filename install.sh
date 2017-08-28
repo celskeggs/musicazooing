@@ -20,7 +20,8 @@ sudo systemctl start redis-server
 systemctl daemon-reload --user
 systemctl enable --user webserver downloader player
 systemctl start --user webserver downloader player
-if [ "$MZ_BUTTON" == "true" ] then
+if [ "$MZ_BUTTON" == "true" ]
+then
 	systemctl enable --user button
 	systemctl start --user button
 fi
