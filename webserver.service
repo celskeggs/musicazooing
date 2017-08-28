@@ -2,6 +2,7 @@
 Description=musicazoo webserver service
 
 [Service]
+EnvironmentFile=DIR/config.env
 ExecStart=/usr/bin/python3 DIR/webserver.py
 Restart=always
 

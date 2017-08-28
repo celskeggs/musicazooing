@@ -84,10 +84,10 @@ body {
     random.onclick = function() {
       if (random.disabled) { return; }
       random.disabled = true;
-      json_request(function() { random.disabled=false; }, function(err) { random.disabled = false; console.log(err); }, "/random");
+      json_request(function() { random.disabled=false; }, function(err) { random.disabled = false; console.log(err); }, "random");
     };
     function reorder(uuid, direction) {
-      json_request(function() {}, default_err, "/reorder?uuid=" + encodeURIComponent(uuid) + "&dir=" + encodeURIComponent("" + direction));
+      json_request(function() {}, default_err, "reorder?uuid=" + encodeURIComponent(uuid) + "&dir=" + encodeURIComponent("" + direction));
     }
     function render_suggestions(results) {
       var outline = "";
@@ -113,7 +113,7 @@ body {
       }, function(err) {
         console.log(err);
         suggest.disabled = false;
-      }, "/search?q=" + encodeURIComponent(youtube_id.value));
+      }, "search?q=" + encodeURIComponent(youtube_id.value));
     };
     youtube_id.onkeypress = function(e) {
       if (!e) { e = window.event; }
@@ -133,10 +133,10 @@ body {
       }, function(err) {
         console.log(err);
         youtube_id.disabled = false;
-      }, "/enqueue?youtube_id=" + encodeURIComponent(youtube_id.value));
+      }, "enqueue?youtube_id=" + encodeURIComponent(youtube_id.value));
     };
     function delete_uuid(x) {
-      json_request(function(data) {}, default_err, "/delete?uuid=" + encodeURIComponent(x));
+      json_request(function(data) {}, default_err, "delete?uuid=" + encodeURIComponent(x));
     }
     function refresh() {
       json_request(function(data) {
@@ -173,7 +173,7 @@ body {
             reorder(this, +1);
           }.bind(data.listing[i].uuid);
         }
-      }, default_err, "/list");
+      }, default_err, "list");
     };
     setInterval(refresh, 1000);
   })();
@@ -359,7 +359,7 @@ class Musicazoo:
 
 cherrypy.config.update({'server.socket_port': 8000})
 
-cherrypy.tree.mount(Musicazoo(), "/")
+cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION"))
 
 cherrypy.engine.start()
 cherrypy.engine.block()
