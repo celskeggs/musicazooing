@@ -24,6 +24,7 @@ body {
 <body>
 <h1>Musicazoo</h1>
 <p>Volume: <button id="sub">-</button><span id="vol">loading</span><button id="add">+</button></p>
+<p><button id="pause">play/pause</button></p>
 <p>Use this form to queue new videos:</p>
 <input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button> <button id="suggest">Search</button> <button id="random">Random</button>
 <ul id="suggestions">
@@ -61,6 +62,7 @@ body {
     var add = document.getElementById("add");
     var sub = document.getElementById("sub");
     var vol = document.getElementById("vol");
+    var pausebtn = document.getElementById("pause");
     var random = document.getElementById("random");
     function clear_suggestions() {
       suggestions.innerHTML = "";
@@ -88,7 +90,10 @@ body {
     };
     function reorder(uuid, direction) {
       json_request(function() {}, default_err, "reorder?uuid=" + encodeURIComponent(uuid) + "&dir=" + encodeURIComponent("" + direction));
-    }
+    };
+    pausebtn.onclick = function() {
+      json_request(function() {}, default_err, "pause");
+    };
     function render_suggestions(results) {
       var outline = "";
       for (var i = 0; i < results.length; i++) {
@@ -322,6 +327,10 @@ class Musicazoo:
 			set_volume(vol)
 		except ValueError:
 			pass
+
+        @cherrypy.expose
+        def pause(self):
+                redis.publish("musicacontrol", "pause")
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()

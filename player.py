@@ -45,6 +45,9 @@ def stop_playing():
 	current_uuid = None
 	player.stop()
 
+def playback_pause():
+	player.pause()
+
 def check_finished_uuid():
 	global current_uuid
 	if player.filename is None:
@@ -54,7 +57,15 @@ def check_finished_uuid():
 	else:
 		return False
 
+def control_callback(message):
+	if player.filename is not None:
+		playback_pause()
+
+p = redis.pubsub(ignore_subscribe_messages=True)
+p.subscribe(**{'musicacontrol': control_callback})
+
 while True:
+	p.get_message()
 	quent = redis.lindex("musicaqueue", 0)
 	removed_uuid = check_finished_uuid()
 	if removed_uuid and quent and removed_uuid == json.loads(quent.decode())["uuid"]:
@@ -70,4 +81,4 @@ while True:
 			start_playing(quent["uuid"], quent["ytid"])
 	elif current_uuid is not None:
 		stop_playing()
-	time.sleep(1)
+	time.sleep(0.5)
