@@ -328,9 +328,9 @@ class Musicazoo:
 		except ValueError:
 			pass
 
-        @cherrypy.expose
-        def pause(self):
-                redis.publish("musicacontrol", "pause")
+	@cherrypy.expose
+	def pause(self):
+		redis.publish("musicacontrol", "pause")
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
