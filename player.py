@@ -6,6 +6,8 @@ import os
 import subprocess
 from mplayer import Player
 
+from musicautils import *
+
 current_uuid = None
 should_be_paused = False
 
@@ -19,12 +21,6 @@ player_args = ("-fs", "--xineramascreen=1") if display_video else ("-vo", "null"
 player = Player(args=player_args)
 
 redis = redis.Redis()
-
-def sanitize(ytid):
-	return re.sub("[^-a-zA-Z0-9_]", "?", ytid)
-
-def path_for(ytid):
-	return os.path.join(DATA_DIR, sanitize(ytid) + ".mp4")
 
 if display_video:
 	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"))
