@@ -64,7 +64,11 @@ def control_callback(message):
 p = redis.pubsub(ignore_subscribe_messages=True)
 p.subscribe(**{'musicacontrol': control_callback})
 
+def status_update():
+	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos || 0, "length": player.length || 0}))
+
 while True:
+	status_update()
 	p.get_message()
 	quent = redis.lindex("musicaqueue", 0)
 	removed_uuid = check_finished_uuid()
