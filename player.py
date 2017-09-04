@@ -11,7 +11,6 @@ from musicautils import *
 current_uuid = None
 should_be_paused = False
 
-DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
 display_video = (os.getenv("MZ_VIDEO") == "true")
 
 if display_video:
