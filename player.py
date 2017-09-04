@@ -7,6 +7,7 @@ import subprocess
 from mplayer import Player
 
 current_uuid = None
+should_be_paused = False
 
 DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
 display_video = (os.getenv("MZ_VIDEO") == "true")
@@ -29,15 +30,14 @@ if display_video:
 	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"))
 
 def start_playing(uuid, ytid):
-	global current_uuid
+	global current_uuid, should_be_paused
 	if current_uuid is not None:
 		stop_playing()
 	assert player.filename is None
 	if os.path.exists(path_for(ytid)):
 		current_uuid = uuid
 		player.loadfile(path_for(ytid))
-		if player.paused:
-			player.pause()
+		should_be_paused = False
 
 def stop_playing():
 	global current_uuid
@@ -46,6 +46,8 @@ def stop_playing():
 	player.stop()
 
 def playback_pause():
+	global should_be_paused
+	should_be_paused = not should_be_paused
 	player.pause()
 
 def check_finished_uuid():
@@ -68,6 +70,8 @@ def status_update():
 	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
 
 while True:
+	if player.paused != should_be_paused:
+		player.pause()
 	status_update()
 	p.get_message()
 	quent = redis.lindex("musicaqueue", 0)
