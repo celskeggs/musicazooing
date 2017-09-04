@@ -70,7 +70,7 @@ def status_update():
 	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
 
 while True:
-	if player.paused != should_be_paused:
+	if player.filename is not None and player.paused != should_be_paused:
 		player.pause()
 	status_update()
 	p.get_message()
