@@ -65,7 +65,7 @@ p = redis.pubsub(ignore_subscribe_messages=True)
 p.subscribe(**{'musicacontrol': control_callback})
 
 def status_update():
-	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos || 0, "length": player.length || 0}))
+	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
 
 while True:
 	status_update()

@@ -311,7 +311,7 @@ class Musicazoo:
 	@cherrypy.tools.json_out()
 	def status(self):
 		elems = self.elems()
-		playback_status = redis.get("musicastatus") || "{}"
+		playback_status = redis.get("musicastatus") or "{}"
 		return dict(json.loads(playback_status), **{"listing": elems, "titles": self.titles(set(elem["ytid"] for elem in elems)), "volume": get_volume()})
 
 	@cherrypy.expose
