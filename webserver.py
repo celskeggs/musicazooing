@@ -311,8 +311,9 @@ class Musicazoo:
 	@cherrypy.tools.json_out()
 	def status(self):
 		elems = self.elems()
-		playback_status = redis.get("musicastatus") or "{}"
-		return dict(json.loads(playback_status), **{"listing": elems, "titles": self.titles(set(elem["ytid"] for elem in elems)), "volume": get_volume()})
+		raw_status = redis.get("musicastatus")
+		playback_status = json.loads(raw_status.decode()) if raw_status else {}
+		return dict(playback_status, **{"listing": elems, "titles": self.titles(set(elem["ytid"] for elem in elems)), "volume": get_volume()})
 
 	@cherrypy.expose
 	def delete(self, uuid):
