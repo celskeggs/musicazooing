@@ -184,10 +184,8 @@ body {
 
 YOUTUBE_DL = os.path.join(os.getenv("HOME"), ".local", "bin", "youtube-dl")
 
-devnull = open("/dev/null", "wb")
-
 def query_search(query, search=True):
-	p = subprocess.Popen([YOUTUBE_DL, "--ignore-errors", "--get-id", "--", query], cwd="/tmp", stdout=subprocess.PIPE, stderr=devnull)
+	p = subprocess.Popen([YOUTUBE_DL, "--ignore-errors", "--get-id", "--", query], cwd="/tmp", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 	out, _ = p.communicate()
 	results = out.strip().decode().split('\n')
 
@@ -265,7 +263,6 @@ class Musicazoo:
 		youtube_ids = query_search(youtube_id) if youtube_id else None
 		if not youtube_ids:
 			return json.dumps({"success": False})
-		print(youtube_ids)
 		for youtube_id in youtube_ids:
 			redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
 			redis.rpush("musicaload", youtube_id)
