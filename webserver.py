@@ -182,20 +182,26 @@ body {
 </html>
 """
 
+YOUTUBE_DL = os.path.join(os.getenv("HOME"), ".local", "bin", "youtube-dl")
+
 def query_search(query, search=True):
+	p = subprocess.Popen([YOUTUBE_DL, "--ignore-errors", "--get-id", "--", query], cwd="/tmp", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+	out, _ = p.communicate()
+	results = out.strip().decode().split('\n')
+
+	if results != ['']:
+		return results
+
+	if not search:
+		return None
 	try:
-		return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--no-playlist", "--get-id", "--", "%s" % query], cwd="/tmp").strip().decode()
+		return [subprocess.check_output([YOUTUBE_DL, "--no-playlist", "--get-id", "--", "ytsearch:%s" % query], cwd="/tmp").strip().decode()]
 	except:
-		if not search:
-			return None
-		try:
-			return subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--no-playlist", "--get-id", "--", "ytsearch:%s" % query], cwd="/tmp").strip().decode()
-		except:
-			return None
+		return None
 
 def query_search_multiple(query, n=5):
 	try:
-		lines = subprocess.check_output([os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl"), "--no-playlist", "--get-id", "--get-title", "--", "ytsearch%d:%s" % (n, query)], cwd="/tmp").strip().decode().split("\n")
+		lines = subprocess.check_output([YOUTUBE_DL, "--no-playlist", "--get-id", "--get-title", "--", "ytsearch%d:%s" % (n, query)], cwd="/tmp").strip().decode().split("\n")
 		assert len(lines) % 2 == 0
 		return [{"title": ai, "ytid": bi} for ai, bi in zip(lines[::2], lines[1::2])]
 	except:
@@ -254,14 +260,15 @@ class Musicazoo:
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
 	def enqueue(self, youtube_id):
-		youtube_id = query_search(youtube_id) if youtube_id else None
-		if not youtube_id:
+		youtube_ids = query_search(youtube_id) if youtube_id else None
+		if not youtube_ids:
 			return json.dumps({"success": False})
-		redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
-		redis.rpush("musicaload", youtube_id)
-		redis.incr("musicacommon.%s" % youtube_id)
-		redis.sadd("musicacommonset", youtube_id)
-		redis.set("musicatime.%s" % youtube_id, time.time())
+		for youtube_id in youtube_ids:
+			redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
+			redis.rpush("musicaload", youtube_id)
+			redis.incr("musicacommon.%s" % youtube_id)
+			redis.sadd("musicacommonset", youtube_id)
+			redis.set("musicatime.%s" % youtube_id, time.time())
 		return {"success": True}
 
 	@cherrypy.expose
