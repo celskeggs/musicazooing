@@ -9,6 +9,7 @@ current_subprocess = None
 current_uuid = None
 
 DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
+display_video = (os.getenv("MZ_VIDEO") == "true")
 
 redis = redis.Redis()
 
@@ -20,10 +21,12 @@ def path_for(ytid):
 
 def get_env():
 	env = dict(os.environ)
-	env["DISPLAY"] = ":0.0"
+	if display_video:
+		env["DISPLAY"] = ":0.0"
 	return env
 
-subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"), env=get_env())
+if display_video:
+	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"), env=get_env())
 
 def start_playing(uuid, ytid):
 	global current_uuid, current_subprocess
@@ -32,7 +35,10 @@ def start_playing(uuid, ytid):
 	assert current_subprocess is None
 	if os.path.exists(path_for(ytid)):
 		current_uuid = uuid
-		current_subprocess = subprocess.Popen(["mplayer", path_for(ytid), "-fs", "--xineramascreen=1"], env=get_env())
+		if display_video:
+			current_subprocess = subprocess.Popen(["mplayer", path_for(ytid), "-fs", "--xineramascreen=1"], env=get_env())
+		else:
+			current_subprocess = subprocess.Popen(["mplayer", path_for(ytid), "-vo", "null"], env=get_env())
 
 def stop_playing():
 	global current_uuid, current_subprocess
