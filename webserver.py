@@ -359,7 +359,7 @@ class Musicazoo:
 
 cherrypy.config.update({'server.socket_port': 8000})
 
-cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION"))
+cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION") or "/")
 
 cherrypy.engine.start()
 cherrypy.engine.block()
