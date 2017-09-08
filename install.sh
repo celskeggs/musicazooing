@@ -7,6 +7,7 @@ HERE=$(pwd)
 
 
 echo "=> Installing debian packages"
+sudo apt-get update
 sudo apt-get install python3-pip nginx redis-server mplayer
 
 
@@ -33,9 +34,9 @@ sudo systemctl restart redis-server nginx
 sudo loginctl enable-linger $USER
 systemctl daemon-reload --user
 systemctl enable --user webserver downloader player
-systemctl start --user webserver downloader player
+systemctl restart --user webserver downloader player
 if [ "$MZ_BUTTON" == "true" ]
 then
 	systemctl enable --user button
-	systemctl start --user button
+	systemctl restart --user button
 fi
