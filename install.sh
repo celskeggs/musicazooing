@@ -29,6 +29,11 @@ cat $HERE/nginx-site | sed "s|DIR|$MZ_LOCATION|" | sudo tee /etc/nginx/sites-ava
 sudo ln -sf /etc/nginx/sites-available/musicazoo /etc/nginx/sites-enabled/musicazoo
 
 
+echo "=> Disabling unwanted programs"
+killall -q xscreensaver
+echo -n > $HOME/.config/lxsession/LXDE/autostart
+
+
 echo "=> Starting systemd services"
 sudo systemctl restart redis-server nginx
 sudo loginctl enable-linger $USER
