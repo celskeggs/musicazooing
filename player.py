@@ -33,6 +33,8 @@ def start_playing(uuid, ytid):
 	global current_uuid, should_be_paused
 	if current_uuid is not None:
 		stop_playing()
+	if player is None:
+		player = Player(args=player_args)
 	assert player.filename is None
 	if os.path.exists(path_for(ytid)):
 		current_uuid = uuid
@@ -52,7 +54,7 @@ def playback_pause():
 
 def check_finished_uuid():
 	global current_uuid
-	if player.filename is None:
+	if player is not None and player.filename is None:
 		uuid = current_uuid
 		current_uuid = None
 		return uuid
@@ -60,17 +62,19 @@ def check_finished_uuid():
 		return False
 
 def control_callback(message):
-	if player.filename is not None:
+	if player is not None and player.filename is not None:
 		playback_pause()
 
 p = redis.pubsub(ignore_subscribe_messages=True)
 p.subscribe(musicacontrol=control_callback)
 
 def status_update():
+	if player is None:
+		return
 	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
 
 while True:
-	if player.filename is not None and player.paused != should_be_paused:
+	if player is not None and player.filename is not None and player.paused != should_be_paused:
 		player.pause()
 	status_update()
 	p.get_message()
@@ -87,6 +91,10 @@ while True:
 		if quent["uuid"] != current_uuid:
 			redis.set("musicatime.%s" % quent["ytid"], time.time())
 			start_playing(quent["uuid"], quent["ytid"])
-	elif current_uuid is not None:
-		stop_playing()
+	else:
+		if current_uuid is not None:
+			stop_playing()
+		if player is not None:
+			player.quit()
+			player = None
 	time.sleep(0.5)
