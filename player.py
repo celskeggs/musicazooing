@@ -30,7 +30,7 @@ if display_video:
 	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"))
 
 def start_playing(uuid, ytid):
-	global current_uuid, should_be_paused
+	global current_uuid, should_be_paused, player
 	if current_uuid is not None:
 		stop_playing()
 	if player is None:
@@ -42,18 +42,18 @@ def start_playing(uuid, ytid):
 		should_be_paused = False
 
 def stop_playing():
-	global current_uuid
+	global current_uuid, player
 	assert current_uuid is not None
 	current_uuid = None
 	player.stop()
 
 def playback_pause():
-	global should_be_paused
+	global should_be_paused, player
 	should_be_paused = not should_be_paused
 	player.pause()
 
 def check_finished_uuid():
-	global current_uuid
+	global current_uuid, player
 	if player is not None and player.filename is None:
 		uuid = current_uuid
 		current_uuid = None
@@ -62,6 +62,7 @@ def check_finished_uuid():
 		return False
 
 def control_callback(message):
+	global player
 	if player is not None and player.filename is not None:
 		playback_pause()
 
@@ -69,6 +70,7 @@ p = redis.pubsub(ignore_subscribe_messages=True)
 p.subscribe(musicacontrol=control_callback)
 
 def status_update():
+	global player
 	if player is None:
 		return
 	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
