@@ -23,7 +23,9 @@ body {
 </head>
 <body>
 <h1>Musicazoo</h1>
+<p id="nowplaying" style="display: none;">Now Playing: <span id="playingtitle"></span> <span id="playingtime"></span>/<span id="playinglength"></span> <span id="paused">[Paused]</span></p>
 <p>Volume: <button id="sub">-</button><span id="vol">loading</span><button id="add">+</button></p>
+<p><button id="pause">play/pause</button></p>
 <p>Use this form to queue new videos:</p>
 <input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button> <button id="suggest">Search</button> <button id="random">Random</button>
 <ul id="suggestions">
@@ -53,6 +55,28 @@ body {
     function default_err(err) {
       console.log("error", err);
     }
+    function left_pad(s, padchar, minlength) {
+      if (s.length < minlength) {
+        return (padchar * (minlength - s.length)) + s;
+      } else {
+        return s;
+      }
+    }
+    function secs_to_hms(secs) {
+      var hours = Math.floor(secs / 3600);
+      var minutes = Math.floor((secs % 3600) / 60);
+      var seconds = Math.floor(secs % 60);
+      if (hours > 0) {
+        return hours.toString() + ":" + left_pad(minutes.toString(), "0", 2) + ":" + left_pad(seconds.toString(), "0", 2);
+      } else {
+        return minutes.toString() + ":" + left_pad(seconds.toString(), "0", 2);
+      }
+    }
+    var nowplaying = document.getElementById("nowplaying");
+    var playingtitle = document.getElementById("playingtitle");
+    var playingtime = document.getElementById("playingtime");
+    var playinglength = document.getElementById("playinglength");
+    var paused = document.getElementById("paused");
     var youtube_id = document.getElementById("youtube_id");
     var submit = document.getElementById("submit");
     var queue = document.getElementById("queue");
@@ -61,6 +85,7 @@ body {
     var add = document.getElementById("add");
     var sub = document.getElementById("sub");
     var vol = document.getElementById("vol");
+    var pausebtn = document.getElementById("pause");
     var random = document.getElementById("random");
     function clear_suggestions() {
       suggestions.innerHTML = "";
@@ -88,7 +113,10 @@ body {
     };
     function reorder(uuid, direction) {
       json_request(function() {}, default_err, "reorder?uuid=" + encodeURIComponent(uuid) + "&dir=" + encodeURIComponent("" + direction));
-    }
+    };
+    pausebtn.onclick = function() {
+      json_request(function() {}, default_err, "pause");
+    };
     function render_suggestions(results) {
       var outline = "";
       for (var i = 0; i < results.length; i++) {
@@ -140,6 +168,21 @@ body {
     }
     function refresh() {
       json_request(function(data) {
+        if (data.listing.length > 0) {
+          playingtitle.textContent = data.titles[data.listing[0].ytid];
+          playingtime.textContent = secs_to_hms(data.time);
+          playinglength.textContent = secs_to_hms(data.length);
+          if (data.paused) {
+            paused.style.display = "";
+          } else {
+            paused.style.display = "none";
+          }
+          nowplaying.style.display = "";
+          pausebtn.disabled = false
+        } else {
+          nowplaying.style.display = "none";
+          pausebtn.disabled = true
+        }
         current_volume = data.volume;
         vol.textContent = current_volume !== null ? current_volume : "loading";
         var total = "";
@@ -173,7 +216,7 @@ body {
             reorder(this, +1);
           }.bind(data.listing[i].uuid);
         }
-      }, default_err, "list");
+      }, default_err, "status");
     };
     setInterval(refresh, 1000);
   })();
@@ -273,9 +316,19 @@ class Musicazoo:
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
-	def list(self):
+	def status(self):
 		elems = self.elems()
-		return {"listing": elems, "titles": self.titles(set(elem["ytid"] for elem in elems)), "volume": get_volume()}
+		raw_status = redis.get("musicastatus")
+		playback_status = json.loads(raw_status.decode()) if raw_status else {}
+		playback_status["listing"] = elems
+		playback_status["titles"] = self.titles(set(elem["ytid"] for elem in elems))
+		playback_status["volume"] = get_volume()
+		return playback_status
+
+	@cherrypy.expose
+	@cherrypy.tools.json_out()
+	def list(self):
+		return self.status()
 
 	@cherrypy.expose
 	def delete(self, uuid):
@@ -329,6 +382,10 @@ class Musicazoo:
 			set_volume(vol)
 		except ValueError:
 			pass
+
+	@cherrypy.expose
+	def pause(self):
+		redis.publish("musicacontrol", "pause")
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()

@@ -4,12 +4,19 @@ import re
 import json
 import os
 import subprocess
+from mplayer import Player
 
-current_subprocess = None
 current_uuid = None
+should_be_paused = False
 
 DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
 display_video = (os.getenv("MZ_VIDEO") == "true")
+
+if display_video:
+        os.environ["DISPLAY"] = ":0.0"
+
+player_args = ("-fs", "--xineramascreen=1") if display_video else ("-vo", "null")
+player = Player(args=player_args)
 
 redis = redis.Redis()
 
@@ -19,54 +26,62 @@ def sanitize(ytid):
 def path_for(ytid):
 	return os.path.join(DATA_DIR, sanitize(ytid) + ".mp4")
 
-def get_env():
-	env = dict(os.environ)
-	if display_video:
-		env["DISPLAY"] = ":0.0"
-	return env
-
 if display_video:
-	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"), env=get_env())
+	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"))
 
 def start_playing(uuid, ytid):
-	global current_uuid, current_subprocess
+	global current_uuid, should_be_paused, player
 	if current_uuid is not None:
 		stop_playing()
-	assert current_subprocess is None
+	if player is None:
+		player = Player(args=player_args)
+	assert player.filename is None
 	if os.path.exists(path_for(ytid)):
 		current_uuid = uuid
-		if display_video:
-			current_subprocess = subprocess.Popen(["mplayer", path_for(ytid), "-fs", "--xineramascreen=1"], env=get_env())
-		else:
-			current_subprocess = subprocess.Popen(["mplayer", path_for(ytid), "-vo", "null"], env=get_env())
+		player.loadfile(path_for(ytid))
+		should_be_paused = False
 
 def stop_playing():
-	global current_uuid, current_subprocess
-	assert current_uuid is not None and current_subprocess is not None
+	global current_uuid, player
+	assert current_uuid is not None
 	current_uuid = None
-	if current_subprocess.poll() is None:
-		current_subprocess.terminate()
-		if current_subprocess.poll() is None:
-			time.sleep(0.2)
-			if current_subprocess.poll() is None:
-				current_subprocess.kill()
-				current_subprocess.wait()
-	assert current_subprocess.poll() is not None
-	current_subprocess = None
+	player.stop()
 
-def check_on_process():
-	global current_uuid, current_subprocess
-	if current_subprocess is not None and current_subprocess.poll() is not None:
-		current_subprocess = None
+def playback_pause():
+	global should_be_paused, player
+	should_be_paused = not should_be_paused
+	player.pause()
+
+def check_finished_uuid():
+	global current_uuid, player
+	if player is not None and player.filename is None:
 		uuid = current_uuid
 		current_uuid = None
 		return uuid
 	else:
 		return False
 
+def control_callback(message):
+	global player
+	if player is not None and player.filename is not None:
+		playback_pause()
+
+p = redis.pubsub(ignore_subscribe_messages=True)
+p.subscribe(musicacontrol=control_callback)
+
+def status_update():
+	global player
+	if player is None:
+		return
+	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
+
 while True:
+	if player is not None and player.filename is not None and player.paused != should_be_paused:
+		player.pause()
+	status_update()
+	p.get_message()
 	quent = redis.lindex("musicaqueue", 0)
-	removed_uuid = check_on_process()
+	removed_uuid = check_finished_uuid()
 	if removed_uuid and quent and removed_uuid == json.loads(quent.decode())["uuid"]:
 		print("DEQUEUE")
 		ent = redis.lpop("musicaqueue")
@@ -78,6 +93,10 @@ while True:
 		if quent["uuid"] != current_uuid:
 			redis.set("musicatime.%s" % quent["ytid"], time.time())
 			start_playing(quent["uuid"], quent["ytid"])
-	elif current_uuid is not None:
-		stop_playing()
-	time.sleep(1)
+	else:
+		if current_uuid is not None:
+			stop_playing()
+		if player is not None:
+			player.quit()
+			player = None
+	time.sleep(0.5)

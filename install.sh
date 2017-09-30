@@ -12,7 +12,7 @@ sudo apt-get install python3-pip nginx redis-server mplayer
 
 
 echo "=> Installing pip packages"
-pip3 install --user --upgrade cherrypy youtube-dl redis pyserial
+pip3 install --user --upgrade cherrypy youtube-dl redis pyserial mplayer.py
 
 
 echo "=> Creating systemd services"
