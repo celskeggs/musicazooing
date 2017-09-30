@@ -319,6 +319,11 @@ class Musicazoo:
 		return playback_status
 
 	@cherrypy.expose
+	@cherrypy.tools.json_out()
+	def list(self):
+		return self.status()
+
+	@cherrypy.expose
 	def delete(self, uuid):
 		found = self.find(uuid)
 		while found is not None:
