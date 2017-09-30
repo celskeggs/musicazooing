@@ -313,7 +313,10 @@ class Musicazoo:
 		elems = self.elems()
 		raw_status = redis.get("musicastatus")
 		playback_status = json.loads(raw_status.decode()) if raw_status else {}
-		return dict(playback_status, **{"listing": elems, "titles": self.titles(set(elem["ytid"] for elem in elems)), "volume": get_volume()})
+		playback_status["listing"] = elems
+		playback_status["titles"] = self.titles(set(elem["ytid"] for elem in elems))
+		playback_status["volume"] = get_volume()
+		return playback_status
 
 	@cherrypy.expose
 	def delete(self, uuid):

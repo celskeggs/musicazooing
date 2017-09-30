@@ -64,7 +64,7 @@ def control_callback(message):
 		playback_pause()
 
 p = redis.pubsub(ignore_subscribe_messages=True)
-p.subscribe(**{'musicacontrol': control_callback})
+p.subscribe(musicacontrol=control_callback)
 
 def status_update():
 	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
