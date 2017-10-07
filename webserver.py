@@ -416,6 +416,7 @@ class Musicazoo:
 		youtube_id = query_search(random.choice(nonrecent), search=False) if youtube_id else None
 		if not youtube_id:
 			return {"success": False}
+		youtube_id = youtube_id[0]
 		redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
 		redis.rpush("musicaload", youtube_id)
 		redis.set("musicatime.%s" % youtube_id, time.time())

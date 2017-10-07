@@ -42,7 +42,7 @@ while True:
 		to_load = to_load.decode()
 		if not os.path.exists(path_for(to_load)):
 			if subprocess.call(gen_cmdline(to_load), cwd=DATA_DIR) != 0:
-				redis.set("musicatitle." + to_load, b"Could not load video %s" % (to_load.encode(),))
+				redis.set("musicatitle." + to_load, ("Could not load video %s" % (to_load,)).encode())
 				continue
 			subprocess.check_call(gen_cmdline(to_load), cwd=DATA_DIR)
 			assert os.path.exists(path_for(to_load))
