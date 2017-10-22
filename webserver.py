@@ -9,6 +9,8 @@ import subprocess
 
 redis = redis.Redis()
 
+reboot_ok = (os.getenv("MZ_REBOOT") == "true")
+
 index_html = """
 <!DOCTYPE html>
 <html>
@@ -34,6 +36,7 @@ body {
 <ul id="queue">
 <li>Loading...</li>
 </ul>
+""" + ("""<p><button id="reboot">emergency reboot</button></p>""" if reboot_ok else "") + """
 <script>
   (function() {
     function json_request(cb, err, endpoint) {
@@ -117,6 +120,11 @@ body {
     pausebtn.onclick = function() {
       json_request(function() {}, default_err, "pause");
     };
+""" + ("""
+    var reboot = document.getElementById("reboot");
+    reboot.onclick = function() {
+      json_request(function () {}, default_err, "reboot");
+    };""" if reboot_ok else "") + """
     function render_suggestions(results) {
       var outline = "";
       for (var i = 0; i < results.length; i++) {
@@ -386,6 +394,14 @@ class Musicazoo:
 	@cherrypy.expose
 	def pause(self):
 		redis.publish("musicacontrol", "pause")
+
+	@cherrypy.expose
+	def reboot(self):
+		if reboot_ok:
+			try:
+				subprocess.check_call(["/usr/bin/sudo", "/sbin/reboot"])
+			except:
+				pass
 
 	@cherrypy.expose
 	@cherrypy.tools.json_out()

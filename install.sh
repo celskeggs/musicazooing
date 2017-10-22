@@ -29,6 +29,10 @@ cat $HERE/nginx-site | sed "s|DIR|$MZ_LOCATION|" | sudo tee /etc/nginx/sites-ava
 sudo ln -sf /etc/nginx/sites-available/musicazoo /etc/nginx/sites-enabled/musicazoo
 
 
+echo "=> Setting up permissions"
+echo "$USER ALL=NOPASSWD:/sbin/reboot" | sudo tee /etc/sudoers.d/musicazoo-reboot > /dev/null
+
+
 echo "=> Starting systemd services"
 sudo systemctl restart redis-server nginx
 sudo loginctl enable-linger $USER
