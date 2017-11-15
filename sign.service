@@ -1,0 +1,10 @@
+[Unit]
+Description=musicazoo sign service
+
+[Service]
+EnvironmentFile=DIR/config.env
+ExecStart=/usr/bin/python3 DIR/sign.py
+Restart=always
+
+[Install]
+WantedBy=default.target
