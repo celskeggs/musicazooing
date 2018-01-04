@@ -6,6 +6,7 @@ import redis
 import json
 import uuid
 import subprocess
+from musicautils import *
 
 redis = redis.Redis()
 
@@ -168,7 +169,7 @@ body {
     }
     function refresh() {
       json_request(function(data) {
-        if (data.listing.length > 0) {
+        if (data.listing.length > 0 && data.loaded[data.listing[0].ytid]) {
           playingtitle.textContent = data.titles[data.listing[0].ytid];
           playingtime.textContent = secs_to_hms(data.time);
           playinglength.textContent = secs_to_hms(data.length);
@@ -195,10 +196,9 @@ body {
           var deleter = queue.children[i].children[1];
           var up = queue.children[i].children[2];
           var down = queue.children[i].children[3];
-          var title = data.listing[i].ytid;
-          if (data.titles[title]) {
-            title = data.titles[title];
-          } else {
+          var ytid = data.listing[i].ytid;
+          var title = data.titles[ytid] || ytid;
+          if (!data.titles[ytid] || !data.loaded[ytid]) {
             title += " (loading)";
           }
           span.innerText = title;
@@ -290,6 +290,12 @@ class Musicazoo:
 			mapping[ytid] = value.decode() if value else None
 		return mapping
 
+	def loaded(self, for_ytids):
+		mapping = {}
+		for ytid in for_ytids:
+			mapping[ytid] = os.path.exists(path_for(ytid))
+		return mapping
+
 	def find(self, uuid):
 		found = [ent for ent in redis.lrange("musicaqueue", 0, -1) if json.loads(ent.decode())["uuid"] == uuid]
 		assert len(found) <= 1
@@ -322,6 +328,7 @@ class Musicazoo:
 		playback_status = json.loads(raw_status.decode()) if raw_status else {}
 		playback_status["listing"] = elems
 		playback_status["titles"] = self.titles(set(elem["ytid"] for elem in elems))
+		playback_status["loaded"] = self.loaded(set(elem["ytid"] for elem in elems))
 		playback_status["volume"] = get_volume()
 		return playback_status
 
