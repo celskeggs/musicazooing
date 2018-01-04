@@ -12,11 +12,17 @@ current_uuid = None
 should_be_paused = False
 
 display_video = (os.getenv("MZ_VIDEO") == "true")
+xinerama_screen = os.getenv("MZ_XINERAMA_SCREEN")
 
 if display_video:
-        os.environ["DISPLAY"] = ":0.0"
+	os.environ["DISPLAY"] = ":0.0"
+	if xinerama_screen:
+		player_args = ("-fs", "--xineramascreen=%s" % xinerama_screen)
+	else:
+		player_args = ("-fs")
+else:
+	player_args = ("-vo", "null")
 
-player_args = ("-fs", "--xineramascreen=1") if display_video else ("-vo", "null")
 player = Player(args=player_args)
 
 redis = redis.Redis()
