@@ -267,7 +267,7 @@ def get_volume():
 	if vol is None:
 		return None
 	else:
-		return min(100, int(vol / VOL_SCALE))
+		return min(110, int(vol / VOL_SCALE * 11.0/10.0))
 
 def set_raw_volume(volume):
 	try:
@@ -277,7 +277,7 @@ def set_raw_volume(volume):
 		pass
 
 def set_volume(volume):
-	set_raw_volume(min(100, volume * VOL_SCALE))
+	set_raw_volume(min(100, volume * VOL_SCALE * 10.0/11.0))
 
 class Musicazoo:
 	def elems(self):
