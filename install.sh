@@ -31,7 +31,7 @@ sudo ln -sf /etc/nginx/sites-available/musicazoo /etc/nginx/sites-enabled/musica
 
 echo "=> Disabling unwanted programs"
 killall -q xscreensaver
-echo -n > $HOME/.config/lxsession/LXDE/autostart
+sed -i '/xscreensaver/d' $HOME/.config/lxsession/LXDE/autostart
 
 
 echo "=> Starting systemd services"
