@@ -9,6 +9,8 @@ from musicautils import *
 
 YOUTUBE_DL = os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl")
 
+DATA_DIR = os.getenv("MZ_DATA_DIR")
+
 if not os.path.isdir(DATA_DIR):
 	os.mkdir(DATA_DIR)
 
