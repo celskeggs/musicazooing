@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+[[ $USER != root ]] || (echo "Must not be root"; exit 1)
+
 cd $(dirname $0)
 HERE=$(pwd)
 
