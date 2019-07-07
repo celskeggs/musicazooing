@@ -341,7 +341,7 @@ class Musicazoo:
 	def delete(self, uuid):
 		found = self.find(uuid)
 		while found is not None:
-			count = redis.lrem("musicaqueue", found)
+			count = redis.lrem("musicaqueue", 0, found)
 			redis.rpush("musicaudit", "removed entry for %s at %s because of deletion request" % (found, time.ctime()))
 			found = self.find(uuid)
 
