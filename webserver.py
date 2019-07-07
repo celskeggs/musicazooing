@@ -279,6 +279,11 @@ def set_raw_volume(volume):
 def set_volume(volume):
 	set_raw_volume(min(100, volume * VOL_SCALE))
 
+try:
+	playlist_max = int(os.getenv("MZ_PLAYLIST_MAX") or "20")
+except ValueError:
+	playlist_max = 20
+
 class Musicazoo:
 	def elems(self):
 		return [json.loads(ent.decode()) for ent in redis.lrange("musicaqueue", 0, -1)]
@@ -312,6 +317,8 @@ class Musicazoo:
 		youtube_ids = query_search(youtube_id) if youtube_id else None
 		if not youtube_ids:
 			return json.dumps({"success": False})
+		if len(youtube_ids) > playlist_max:
+			youtube_ids = youtube_ids[:playlist_max]
 		for youtube_id in youtube_ids:
 			redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
 			redis.rpush("musicaload", youtube_id)
