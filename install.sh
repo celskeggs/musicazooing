@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+[[ $USER != root ]] || (echo "Must not be root"; exit 1)
+
 cd $(dirname $0)
 HERE=$(pwd)
 
@@ -31,6 +33,11 @@ sudo ln -sf /etc/nginx/sites-available/musicazoo /etc/nginx/sites-enabled/musica
 
 echo "=> Setting up permissions"
 echo "$USER ALL=NOPASSWD:/sbin/reboot" | sudo tee /etc/sudoers.d/musicazoo-reboot > /dev/null
+
+
+echo "=> Disabling unwanted programs"
+killall -q xscreensaver || true
+sed -i '/xscreensaver/d' $HOME/.config/lxsession/LXDE/autostart
 
 
 echo "=> Starting systemd services"

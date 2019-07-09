@@ -6,6 +6,7 @@ import redis
 import json
 import uuid
 import subprocess
+from musicautils import *
 
 redis = redis.Redis()
 
@@ -176,7 +177,7 @@ body {
     }
     function refresh() {
       json_request(function(data) {
-        if (data.listing.length > 0) {
+        if (data.listing.length > 0 && data.loaded[data.listing[0].ytid]) {
           playingtitle.textContent = data.titles[data.listing[0].ytid];
           playingtime.textContent = secs_to_hms(data.time);
           playinglength.textContent = secs_to_hms(data.length);
@@ -203,10 +204,9 @@ body {
           var deleter = queue.children[i].children[1];
           var up = queue.children[i].children[2];
           var down = queue.children[i].children[3];
-          var title = data.listing[i].ytid;
-          if (data.titles[title]) {
-            title = data.titles[title];
-          } else {
+          var ytid = data.listing[i].ytid;
+          var title = data.titles[ytid] || ytid;
+          if (!data.titles[ytid] || !data.loaded[ytid]) {
             title += " (loading)";
           }
           span.innerText = title;
@@ -287,6 +287,11 @@ def set_raw_volume(volume):
 def set_volume(volume):
 	set_raw_volume(min(100, volume * VOL_SCALE))
 
+try:
+	playlist_max = int(os.getenv("MZ_PLAYLIST_MAX") or "20")
+except ValueError:
+	playlist_max = 20
+
 class Musicazoo:
 	def elems(self):
 		return [json.loads(ent.decode()) for ent in redis.lrange("musicaqueue", 0, -1)]
@@ -296,6 +301,12 @@ class Musicazoo:
 		for ytid in for_ytids:
 			value = redis.get("musicatitle.%s" % ytid)
 			mapping[ytid] = value.decode() if value else None
+		return mapping
+
+	def loaded(self, for_ytids):
+		mapping = {}
+		for ytid in for_ytids:
+			mapping[ytid] = os.path.exists(path_for(ytid))
 		return mapping
 
 	def find(self, uuid):
@@ -314,6 +325,8 @@ class Musicazoo:
 		youtube_ids = query_search(youtube_id) if youtube_id else None
 		if not youtube_ids:
 			return json.dumps({"success": False})
+		if len(youtube_ids) > playlist_max:
+			youtube_ids = youtube_ids[:playlist_max]
 		for youtube_id in youtube_ids:
 			redis.rpush("musicaqueue", json.dumps({"ytid": youtube_id, "uuid": str(uuid.uuid4())}))
 			redis.rpush("musicaload", youtube_id)
@@ -330,6 +343,7 @@ class Musicazoo:
 		playback_status = json.loads(raw_status.decode()) if raw_status else {}
 		playback_status["listing"] = elems
 		playback_status["titles"] = self.titles(set(elem["ytid"] for elem in elems))
+		playback_status["loaded"] = self.loaded(set(elem["ytid"] for elem in elems))
 		playback_status["volume"] = get_volume()
 		return playback_status
 
@@ -342,7 +356,7 @@ class Musicazoo:
 	def delete(self, uuid):
 		found = self.find(uuid)
 		while found is not None:
-			count = redis.lrem("musicaqueue", found)
+			count = redis.lrem("musicaqueue", 0, found)
 			redis.rpush("musicaudit", "removed entry for %s at %s because of deletion request" % (found, time.ctime()))
 			found = self.find(uuid)
 

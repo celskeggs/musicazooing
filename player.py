@@ -6,25 +6,26 @@ import os
 import subprocess
 from mplayer import Player
 
+from musicautils import *
+
 current_uuid = None
 should_be_paused = False
 
-DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
 display_video = (os.getenv("MZ_VIDEO") == "true")
+xinerama_screen = os.getenv("MZ_XINERAMA_SCREEN")
 
 if display_video:
-        os.environ["DISPLAY"] = ":0.0"
+	os.environ["DISPLAY"] = ":0.0"
+	if xinerama_screen:
+		player_args = ("-fs", "--xineramascreen=%s" % xinerama_screen)
+	else:
+		player_args = ("-fs")
+else:
+	player_args = ("-vo", "null")
 
-player_args = ("-fs", "--xineramascreen=1") if display_video else ("-vo", "null")
 player = Player(args=player_args)
 
 redis = redis.Redis()
-
-def sanitize(ytid):
-	return re.sub("[^-a-zA-Z0-9_]", "?", ytid)
-
-def path_for(ytid):
-	return os.path.join(DATA_DIR, sanitize(ytid) + ".mp4")
 
 if display_video:
 	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"))
