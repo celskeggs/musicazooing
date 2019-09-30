@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+[[ $USER != root ]] || (echo "Must not be root"; exit 1)
+
 cd $(dirname $0)
 HERE=$(pwd)
 
@@ -27,6 +29,11 @@ done
 echo "=> Setting up nginx web server"
 cat $HERE/nginx-site | sed "s|DIR|$MZ_LOCATION|" | sudo tee /etc/nginx/sites-available/musicazoo > /dev/null
 sudo ln -sf /etc/nginx/sites-available/musicazoo /etc/nginx/sites-enabled/musicazoo
+
+
+echo "=> Disabling unwanted programs"
+killall -q xscreensaver || true
+sed -i '/xscreensaver/d' $HOME/.config/lxsession/LXDE/autostart
 
 
 echo "=> Starting systemd services"
