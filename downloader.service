@@ -2,6 +2,7 @@
 Description=musicazoo downloader service
 
 [Service]
+EnvironmentFile=DIR/config.env
 ExecStart=/usr/bin/python3 DIR/downloader.py
 Restart=always
 

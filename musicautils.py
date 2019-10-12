@@ -1,7 +1,7 @@
 import os
 import re
 
-DATA_DIR = os.path.join(os.getenv("HOME"), "musicazoo_videos")
+DATA_DIR = os.getenv("MZ_DATA_DIR")
 
 def sanitize(ytid):
 	print("given", ytid)
