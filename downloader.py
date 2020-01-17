@@ -34,7 +34,7 @@ while True:
 	_, to_load = redis.blpop("musicaload")
 	try:
 		to_load = to_load.decode()
-		if redis.get("musicatitle." + to_load) is None:
+		if redis.get("musicatitle." + to_load) is None or redis.get("musicatitle." + to_load).startswith(b"Could not load video "):
 			redis.set("musicatitle." + to_load, get_title(to_load).strip())
 		if not os.path.exists(path_for(to_load)):
 			if subprocess.call(gen_cmdline(to_load), cwd=DATA_DIR) != 0:

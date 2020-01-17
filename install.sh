@@ -20,7 +20,7 @@ pip3 install --user --upgrade cherrypy youtube-dl redis pyserial mplayer.py
 echo "=> Creating systemd services"
 mkdir -p $HOME/.config/systemd/user
 
-for x in webserver.service downloader.service player.service button.service
+for x in webserver.service downloader.service player.service button.service nopeserver.service wipe.service wipe.timer
 do
 	cat $HERE/$x | sed "s|DIR|$HERE|g" >$HOME/.config/systemd/user/$x
 done
@@ -39,9 +39,10 @@ sed -i '/xscreensaver/d' $HOME/.config/lxsession/LXDE/autostart
 echo "=> Starting systemd services"
 sudo systemctl restart redis-server nginx
 sudo loginctl enable-linger $USER
+
 systemctl daemon-reload --user
-systemctl enable --user webserver downloader player
-systemctl restart --user webserver downloader player
+systemctl enable --user webserver downloader player wipe.timer
+systemctl restart --user webserver downloader player wipe.timer
 if [ "$MZ_BUTTON" == "true" ]
 then
 	systemctl enable --user button

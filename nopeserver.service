@@ -1,0 +1,10 @@
+[Unit]
+Description=musicazoo nopeserver service
+
+[Service]
+EnvironmentFile=DIR/config.env
+ExecStart=/usr/bin/python3 DIR/nopeserver.py
+Restart=always
+
+[Install]
+WantedBy=default.target

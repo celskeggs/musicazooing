@@ -13,7 +13,7 @@ redis = redis.Redis()
 index_html = """
 <!DOCTYPE html>
 <html>
-<head>
+	<head>
 <title>Musicazoo WIP</title>
 <style>
 body {
@@ -250,7 +250,7 @@ def query_search_multiple(query, n=5):
 	except:
 		return None
 
-VOL_SCALE = 0.7
+VOL_SCALE = 0.8
 
 def raw_get_volume():
 	try:
@@ -414,7 +414,7 @@ class Musicazoo:
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
 	def random(self):
-		youtube_ids = redis.srandmember("musicacommonset", 30)
+		youtube_ids = redis.srandmember("musicacommonset", 300)
 		if not youtube_ids:
 			return {"success": False}
 		nonrecent = []
@@ -440,5 +440,6 @@ cherrypy.config.update({'server.socket_port': 8000})
 
 cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION") or "/")
 
-cherrypy.engine.start()
-cherrypy.engine.block()
+if __name__ == "__main__":
+	cherrypy.engine.start()
+	cherrypy.engine.block()
