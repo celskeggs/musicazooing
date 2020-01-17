@@ -8,6 +8,8 @@ import uuid
 import subprocess
 from musicautils import *
 
+skewlist = []
+
 redis = redis.Redis()
 
 index_html = """
@@ -314,6 +316,7 @@ class Musicazoo:
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
 	def enqueue(self, youtube_id):
+		if self.skew(): return {"success": False}
 		youtube_ids = query_search(youtube_id) if youtube_id else None
 		if not youtube_ids:
 			return json.dumps({"success": False})
@@ -327,16 +330,25 @@ class Musicazoo:
 			redis.set("musicatime.%s" % youtube_id, time.time())
 		return {"success": True}
 
+	def skew(self):
+		return cherrypy.request.headers.get("X-Forwarded-For") in skewlist
+
 	@cherrypy.expose
 	@cherrypy.tools.json_out()
 	def status(self):
 		elems = self.elems()
 		raw_status = redis.get("musicastatus")
 		playback_status = json.loads(raw_status.decode()) if raw_status else {}
-		playback_status["listing"] = elems
-		playback_status["titles"] = self.titles(set(elem["ytid"] for elem in elems))
-		playback_status["loaded"] = self.loaded(set(elem["ytid"] for elem in elems))
-		playback_status["volume"] = get_volume()
+		if self.skew():
+			playback_status["listing"] = []
+			playback_status["titles"] = {}
+			playback_status["loaded"] = {}
+			playback_status["volume"] = 0
+		else:
+			playback_status["listing"] = elems
+			playback_status["titles"] = self.titles(set(elem["ytid"] for elem in elems))
+			playback_status["loaded"] = self.loaded(set(elem["ytid"] for elem in elems))
+			playback_status["volume"] = get_volume()
 		return playback_status
 
 	@cherrypy.expose
@@ -346,6 +358,7 @@ class Musicazoo:
 
 	@cherrypy.expose
 	def delete(self, uuid):
+		if self.skew(): return
 		found = self.find(uuid)
 		while found is not None:
 			count = redis.lrem("musicaqueue", 0, found)
@@ -391,6 +404,7 @@ class Musicazoo:
 
 	@cherrypy.expose
 	def setvolume(self, vol):
+		if self.skew(): return
 		vol = min(get_volume() + 5, int(vol))
 		try:
 			set_volume(vol)
