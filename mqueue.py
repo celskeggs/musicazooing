@@ -5,6 +5,7 @@ import redis
 import random
 import subprocess
 import time
+import urllib.parse
 import uuid
 
 
@@ -238,9 +239,34 @@ class Fetcher:
 	def download_into(self, ytid: str, stash: Stash):
 		return subprocess.call(self._gen_cmdline(ytid), cwd=stash.dir) == 0
 
+	def parse_video_url(self, url: str):
+		"""
+		If the provided URL is a unique reference to a youtube ID, return the ID. Otherwise, return None.
+		"""
+		try:
+			urp = urllib.parse.urlparse(url)
+		except ValueError:
+			return None
+		if urp is None or urp.scheme not in ("", "http", "https"):
+			return None
+		if urp.netloc in ("youtube.com", "m.youtube.com"):
+			if urp.path != "/watch":
+				return None
+			video = urllib.parse.parse_qs(urp.query).get("v","")
+		elif urp.netloc == "youtu.be":
+			video = urp.path.lstrip("/")
+		else:
+			return None
+		if len(video) != 11 or sanitize_ytid(video) != video:
+			return None
+		return video
+
 	def query_search(self, query, search=True):
 		if not query:
 			return None
+		ytid = self.parse_video_url(query)
+		if ytid:
+			return [ytid]
 
 		p = subprocess.Popen([self.ytdl_path, "--ignore-errors", "--get-id", "--", query], cwd="/tmp", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 		out, _ = p.communicate()

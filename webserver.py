@@ -136,7 +136,7 @@ class Musicazoo:
 
 cherrypy.config.update({'server.socket_port': 8000})
 
-cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION") or "/", config={"/images": {"tools.staticdir.on": True, "tools.staticdir.dir": os.path.join(os.path.dirname(__file__), "images")}})
+cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION") or "/", config={"/images": {"tools.staticdir.on": True, "tools.staticdir.dir": os.path.abspath(os.path.join(os.path.dirname(__file__), "images"))}})
 
 if __name__ == "__main__":
 	cherrypy.engine.start()
