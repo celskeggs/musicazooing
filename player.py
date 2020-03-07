@@ -1,12 +1,8 @@
-import redis
 import time
-import re
-import json
 import os
 import subprocess
-from mplayer import Player
-
-from musicautils import *
+import mplayer
+import mqueue
 
 current_uuid = None
 should_be_paused = False
@@ -23,9 +19,10 @@ if display_video:
 else:
 	player_args = ("-vo", "null")
 
-player = Player(args=player_args)
+player = mplayer.Player(args=player_args)
 
-redis = redis.Redis()
+queue = mqueue.Queue()
+stash = mqueue.Stash()
 
 if display_video:
 	subprocess.check_call(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configure-screen.sh"))
@@ -35,11 +32,11 @@ def start_playing(uuid, ytid):
 	if current_uuid is not None:
 		stop_playing()
 	if player is None:
-		player = Player(args=player_args)
+		player = mplayer.Player(args=player_args)
 	assert player.filename is None
-	if os.path.exists(path_for(ytid)):
+	if stash.exists(ytid):
 		current_uuid = uuid
-		player.loadfile(path_for(ytid))
+		player.loadfile(stash.path_for(ytid))
 		should_be_paused = False
 
 def stop_playing():
@@ -62,38 +59,42 @@ def check_finished_uuid():
 	else:
 		return False
 
-def control_callback(message):
+def on_pause():
 	global player
 	if player is not None and player.filename is not None:
 		playback_pause()
 
-p = redis.pubsub(ignore_subscribe_messages=True)
-p.subscribe(musicacontrol=control_callback)
+def on_navigate(rel: float):
+	global player
+	if player is not None and player.filename is not None:
+		nt = player.time_pos + rel
+		if nt < 0:
+			nt = 0
+		player.time_pos = nt
+
+queue.subscribe_on_pause(on_pause)
+queue.subscribe_on_navigate(on_navigate)
 
 def status_update():
 	global player
 	if player is None:
 		return
-	redis.set("musicastatus", json.dumps({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0}))
+	queue.set_playback_status({"paused": player.paused, "time": player.time_pos or 0, "length": player.length or 0})
 
 while True:
 	if player is not None and player.filename is not None and player.paused != should_be_paused:
 		player.pause()
 	status_update()
-	p.get_message()
-	quent = redis.lindex("musicaqueue", 0)
+	queue.check_messages()
+	quent = queue.current_playable_on_queue()
 	removed_uuid = check_finished_uuid()
-	if removed_uuid and quent and removed_uuid == json.loads(quent.decode())["uuid"]:
-		print("DEQUEUE")
-		ent = redis.lpop("musicaqueue")
-		redis.set("musicatime.%s" % json.loads(quent.decode())["ytid"], time.time())
-		redis.rpush("musicaudit", "dequeued entry %s at %s because process ended" % (ent, time.ctime()));
-		quent = redis.lindex("musicaqueue", 0)
+	if removed_uuid and quent and removed_uuid == quent.uuid:
+		queue.dequeue_playable()
+		quent = queue.current_playable_on_queue()
 	if quent:
-		quent = json.loads(quent.decode())
-		if quent["uuid"] != current_uuid:
-			redis.set("musicatime.%s" % quent["ytid"], time.time())
-			start_playing(quent["uuid"], quent["ytid"])
+		if quent.uuid != current_uuid:
+			queue.record_play_start(quent.ytid)
+			start_playing(quent.uuid, quent.ytid)
 	else:
 		if current_uuid is not None:
 			stop_playing()
@@ -101,3 +102,4 @@ while True:
 			player.quit()
 			player = None
 	time.sleep(0.5)
+

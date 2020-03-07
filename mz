@@ -8,7 +8,7 @@ import json
 import sys
 
 def get_status():
-	return json.loads(urlopen("http://musicazoo.mit.edu/list").read().decode("utf-8"))
+	return json.loads(urlopen("http://musicazoo.mit.edu/status").read().decode("utf-8"))
 
 def prettyprint_listing():
 	status = get_status()

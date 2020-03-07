@@ -1,47 +1,42 @@
-import redis
-import re
 import traceback
-import json
-import os
-import subprocess
+import mqueue
 
-from musicautils import *
+queue = mqueue.Queue()
+fetcher = mqueue.Fetcher()
+stash = mqueue.Stash()
+stash.create_datadir_if_missing()
 
-YOUTUBE_DL = os.path.join(os.getenv("HOME"), ".local/bin/youtube-dl")
 
-if not os.path.isdir(DATA_DIR):
-	os.mkdir(DATA_DIR)
+def rebuild_loading_queue():
+	queue.clear_loading_queue()
 
-redis = redis.Redis()
+	for ent in queue.read_queue():
+		queue.request_load_video(ent.ytid)
 
-# refresh the loading queue
 
-while redis.lpop("musicaload") is not None:
-	pass
+def try_load_one(to_load_ytid):
+	title = queue.read_title(to_load_ytid)
+	# TODO: stop using title as marker of loading state...
+	if title is None or title.startswith("Could not load video "):
+		queue.set_title(to_load_ytid, fetcher.get_title(to_load_ytid))
+	if not stash.exists(to_load_ytid):
+		if not fetcher.download_into(to_load_ytid, stash):
+			queue.set_title(to_load_ytid, ("Could not load video %s" % to_load_ytid).encode())
+		else:
+			assert stash.exists(to_load_ytid)
 
-for ent in redis.lrange("musicaqueue", 0, -1):
-	redis.rpush("musicaload", json.loads(ent.decode())["ytid"])
 
-def gen_cmdline(ytid, for_title=False):
-	return [YOUTUBE_DL, "--no-playlist", "--id", "--no-progress", "--format", "mp4"] + (["--get-title"] if for_title else []) + ["--", sanitize(ytid)]
+def loading_loop():
+	while True:
+		to_load_ytid = queue.take_loading_queue()
+		try:
+			try_load_one(to_load_ytid)
+		except:
+			print("Failed to load.")
+			traceback.print_exc()
 
-def get_title(ytid):
-	return subprocess.check_output(gen_cmdline(ytid, for_title=True))
 
-# "mplayer -fs"
+if __name__ == "__main__":
+	rebuild_loading_queue()
+	loading_loop()
 
-while True:
-	_, to_load = redis.blpop("musicaload")
-	try:
-		to_load = to_load.decode()
-		if redis.get("musicatitle." + to_load) is None or redis.get("musicatitle." + to_load).startswith(b"Could not load video "):
-			redis.set("musicatitle." + to_load, get_title(to_load).strip())
-		if not os.path.exists(path_for(to_load)):
-			if subprocess.call(gen_cmdline(to_load), cwd=DATA_DIR) != 0:
-				redis.set("musicatitle." + to_load, ("Could not load video %s" % (to_load,)).encode())
-				continue
-			subprocess.check_call(gen_cmdline(to_load), cwd=DATA_DIR)
-			assert os.path.exists(path_for(to_load))
-	except:
-		print("Failed to load.")
-		traceback.print_exc()

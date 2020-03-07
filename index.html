@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Musicazoo WIP</title>
+<style>
+body {
+	color: #f3fde1;
+	background-color: #406873;
+}
+</style>
+</head>
+<body>
+<h1>Musicazoo</h1>
+<p id="nowplaying" style="display: none;">Now Playing: <span id="playingtitle"></span> <span id="playingtime"></span>/<span id="playinglength"></span> <span id="paused">[Paused]</span></p>
+<p>Volume: <button id="sub">-</button><span id="vol">loading</span><button id="add">+</button></p>
+<p><button id="pause">play/pause</button> <button id="reverse">&lt;&lt;</button> <button id="forward">&gt;&gt;</button></p>
+<p>Use this form to queue new videos:</p>
+<input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button> <button id="suggest">Search</button> <button id="random">Random</button>
+<ul id="suggestions">
+</ul>
+<p>Queued items:</p>
+<ul id="queue">
+<li>Loading...</li>
+</ul>
+<script>
+	(function() {
+		function json_request(cb, err, endpoint) {
+			var req = new XMLHttpRequest();
+			req.addEventListener("load", function() {
+				var json = JSON.parse(this.responseText);
+				if (json) {
+					cb(json);
+				} else {
+					err("bad json from endpoint " + endpoint);
+				}
+			});
+			req.addEventListener("error", function() {
+				err("xhr failed");
+			});
+			req.open("POST", endpoint, true);
+			req.send();
+		}
+		function default_err(err) {
+			console.log("error", err);
+		}
+		function left_pad(s, padchar, minlength) {
+			if (s.length < minlength) {
+				return (padchar * (minlength - s.length)) + s;
+			} else {
+				return s;
+			}
+		}
+		function secs_to_hms(secs) {
+			var hours = Math.floor(secs / 3600);
+			var minutes = Math.floor((secs % 3600) / 60);
+			var seconds = Math.floor(secs % 60);
+			if (hours > 0) {
+				return hours.toString() + ":" + left_pad(minutes.toString(), "0", 2) + ":" + left_pad(seconds.toString(), "0", 2);
+			} else {
+				return minutes.toString() + ":" + left_pad(seconds.toString(), "0", 2);
+			}
+		}
+		var nowplaying = document.getElementById("nowplaying");
+		var playingtitle = document.getElementById("playingtitle");
+		var playingtime = document.getElementById("playingtime");
+		var playinglength = document.getElementById("playinglength");
+		var paused = document.getElementById("paused");
+		var youtube_id = document.getElementById("youtube_id");
+		var submit = document.getElementById("submit");
+		var queue = document.getElementById("queue");
+		var suggestions = document.getElementById("suggestions");
+		var suggest = document.getElementById("suggest");
+		var add = document.getElementById("add");
+		var sub = document.getElementById("sub");
+		var vol = document.getElementById("vol");
+		var pausebtn = document.getElementById("pause");
+		var forwardbtn = document.getElementById("forward");
+		var reversebtn = document.getElementById("reverse");
+		var random = document.getElementById("random");
+		var cachedDice = document.createElement("img");
+		cachedDice.src = "/images/dice.svg";
+		function clear_suggestions() {
+			suggestions.innerHTML = "";
+		}
+		var current_volume = null;
+		function set_volume(vol) {
+			current_volume = vol;
+			json_request(function() {}, default_err, "setvolume?vol=" + vol);
+			return current_volume;
+		};
+		add.onclick = function() {
+			if (current_volume !== null) {
+				set_volume(current_volume + 5);
+			}
+		};
+		sub.onclick = function() {
+			if (current_volume !== null) {
+				set_volume(current_volume - 5);
+			}
+		};
+		random.onclick = function() {
+			if (random.disabled) { return; }
+			random.disabled = true;
+			json_request(function() { random.disabled=false; }, function(err) { random.disabled = false; console.log(err); }, "random");
+		};
+		function reorder(uuid, direction) {
+			json_request(function() {}, default_err, "reorder?uuid=" + encodeURIComponent(uuid) + "&dir=" + encodeURIComponent("" + direction));
+		};
+		pausebtn.onclick = function() {
+			json_request(function() {}, default_err, "pause");
+		};
+		forwardbtn.onclick = function() {
+			json_request(function() {}, default_err, "navigate?rel=30");
+		};
+		reversebtn.onclick = function() {
+			json_request(function() {}, default_err, "navigate?rel=-30");
+		};
+		function render_suggestions(results) {
+			var outline = "";
+			for (var i = 0; i < results.length; i++) {
+				outline += "<li><span></span> | <button>queue</button></li>";
+			}
+			suggestions.innerHTML = outline;
+			for (var i = 0; i < results.length; i++) {
+				suggestions.children[i].children[0].textContent = results[i].title;
+				suggestions.children[i].children[1].onclick = function() {
+					youtube_id.value = this;
+					suggestions.innerHTML = "";
+					submit.onclick();
+				}.bind(results[i].ytid);
+			}
+		}
+		suggest.onclick = function() {
+			if (suggest.disabled) { return; }
+			suggest.disabled = true;
+			json_request(function(data) {
+				render_suggestions(data);
+				suggest.disabled = false;
+			}, function(err) {
+				console.log(err);
+				suggest.disabled = false;
+			}, "search?q=" + encodeURIComponent(youtube_id.value));
+		};
+		youtube_id.onkeypress = function(e) {
+			if (!e) { e = window.event; }
+			clear_suggestions();
+			var keyCode = e.keyCode || e.which;
+			if (keyCode == 13) {
+				submit.onclick();
+				return false;
+			}
+		};
+		submit.onclick = function() {
+			if (youtube_id.disabled) { return; }
+			youtube_id.disabled = true;
+			json_request(function(data) {
+				youtube_id.value = "";
+				youtube_id.disabled = false;
+			}, function(err) {
+				console.log(err);
+				youtube_id.disabled = false;
+			}, "enqueue?youtube_id=" + encodeURIComponent(youtube_id.value));
+		};
+		function delete_uuid(x) {
+			json_request(function(data) {}, default_err, "delete?uuid=" + encodeURIComponent(x));
+		}
+		function refresh() {
+			json_request(function(data) {
+				if (data.listing.length > 0 && data.loaded[data.listing[0].ytid]) {
+					playingtitle.textContent = data.titles[data.listing[0].ytid];
+					playingtime.textContent = secs_to_hms(data.time);
+					playinglength.textContent = secs_to_hms(data.length);
+					if (data.paused) {
+						paused.style.display = "";
+					} else {
+						paused.style.display = "none";
+					}
+					nowplaying.style.display = "";
+					pausebtn.disabled = false;
+					forwardbtn.disabled = false;
+					reversebtn.disabled = false;
+				} else {
+					nowplaying.style.display = "none";
+					pausebtn.disabled = true;
+					forwardbtn.disabled = true;
+					reversebtn.disabled = true;
+				}
+				current_volume = data.volume;
+				vol.textContent = current_volume !== null ? current_volume : "loading";
+				var total = "";
+				for (var i = 0; i < data.listing.length; i++) {
+					total += "<li><span></span> | <button>delete</button> | <button>up</button> <button>down</button></li>";
+				}
+				queue.innerHTML = total;
+				for (var i = 0; i < data.listing.length; i++) {
+					var span = queue.children[i].children[0];
+					var deleter = queue.children[i].children[1];
+					var up = queue.children[i].children[2];
+					var down = queue.children[i].children[3];
+					var ytid = data.listing[i].ytid;
+					var random = data.listing[i].random || false;
+					var title = data.titles[ytid] || ytid;
+					if (!data.titles[ytid] || !data.loaded[ytid]) {
+						title += " (loading)";
+					}
+					span.innerText = title;
+					if (random) {
+						span.innerText += " ";
+						span.appendChild(cachedDice.cloneNode());
+					}
+					deleter.onclick = (function() { delete_uuid(this); }).bind(data.listing[i].uuid);
+					if (i == 0) {
+						up.style.display = "none";
+					}
+					up.onclick = function() {
+						reorder(this, -1);
+					}.bind(data.listing[i].uuid);
+					if (i == data.listing.length - 1) {
+						down.style.display = "none";
+					}
+					down.onclick = function() {
+						reorder(this, +1);
+					}.bind(data.listing[i].uuid);
+				}
+			}, default_err, "status");
+		};
+		setInterval(refresh, 1000);
+	})();
+</script>
+</body>
+</html>
