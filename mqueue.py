@@ -243,16 +243,21 @@ class Fetcher:
 		"""
 		If the provided URL is a unique reference to a youtube ID, return the ID. Otherwise, return None.
 		"""
+		if "//" not in url:
+			url = "https://" + url
 		try:
 			urp = urllib.parse.urlparse(url)
 		except ValueError:
 			return None
 		if urp is None or urp.scheme not in ("", "http", "https"):
 			return None
-		if urp.netloc in ("youtube.com", "m.youtube.com"):
+		if urp.netloc in ("youtube.com", "m.youtube.com", "www.youtube.com"):
 			if urp.path != "/watch":
 				return None
-			video = urllib.parse.parse_qs(urp.query).get("v","")
+			videos = urllib.parse.parse_qs(urp.query).get("v","")
+			if not videos:
+				return None
+			video = videos[0]
 		elif urp.netloc == "youtu.be":
 			video = urp.path.lstrip("/")
 		else:
