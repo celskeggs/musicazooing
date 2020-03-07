@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Musicazoo WIP</title>
+<title>Musicazoo</title>
 <style>
 body {
 	color: #f3fde1;
@@ -13,7 +13,8 @@ body {
 <h1>Musicazoo</h1>
 <p id="nowplaying" style="display: none;">Now Playing: <span id="playingtitle"></span> <span id="playingtime"></span>/<span id="playinglength"></span> <span id="paused">[Paused]</span></p>
 <p>Volume: <button id="sub">-</button><span id="vol">loading</span><button id="add">+</button></p>
-<p><button id="pause">play/pause</button> <button id="reverse">&lt;&lt;</button> <button id="forward">&gt;&gt;</button></p>
+<p><button id="pause">play/pause</button> <button id="reverse">&lt;&lt;</button> <button id="forward">&gt;&gt;</button> <button id="mirrorbtn">Mirror</button></p>
+<p style="display: none" id="mirror"></p>
 <p>Use this form to queue new videos:</p>
 <input type="text" id="youtube_id" placeholder="youtube search or ID"> <button id="submit">Queue</button> <button id="suggest">Search</button> <button id="random">Random</button>
 <ul id="suggestions">
@@ -65,6 +66,7 @@ body {
 		var playingtime = document.getElementById("playingtime");
 		var playinglength = document.getElementById("playinglength");
 		var paused = document.getElementById("paused");
+		var mirror = document.getElementById("mirror");
 		var youtube_id = document.getElementById("youtube_id");
 		var submit = document.getElementById("submit");
 		var queue = document.getElementById("queue");
@@ -76,6 +78,7 @@ body {
 		var pausebtn = document.getElementById("pause");
 		var forwardbtn = document.getElementById("forward");
 		var reversebtn = document.getElementById("reverse");
+		var mirrorbtn = document.getElementById("mirrorbtn");
 		var random = document.getElementById("random");
 		var cachedDice = document.createElement("img");
 		cachedDice.src = "/images/dice.svg";
@@ -114,6 +117,47 @@ body {
 		};
 		reversebtn.onclick = function() {
 			json_request(function() {}, default_err, "navigate?rel=-30");
+		};
+		function update_mirror(ytid, time, paused) {
+			var mirrorvideo = document.getElementById("mirrorvideo");
+			if (!ytid || mirror.style.display === "none") {
+				if (mirrorvideo !== null) {
+					mirrorvideo.remove();
+				}
+				mirror.textContent = "No Video";
+				return;
+			}
+			if (mirrorvideo === null) {
+				mirror.textContent = "";
+				mirrorvideo = document.createElement("video");
+				mirrorvideo.id = "mirrorvideo";
+				mirrorvideo.textContent = "video";
+				mirror.appendChild(mirrorvideo);
+			}
+			var src = "/video/" + ytid + ".mp4";
+			if (!mirrorvideo.src.endsWith(src)) {
+				mirrorvideo.src = src;
+				mirrorvideo.currentTime = time;
+				console.log("start time");
+			} else {
+				if (Math.abs(mirrorvideo.currentTime - time) > 1) {
+					console.log("change time", mirrorvideo.currentTime, time);
+					mirrorvideo.currentTime = time;
+				}
+			}
+			if (mirrorvideo.paused && !paused) {
+				mirrorvideo.play();
+			} else if (!mirrorvideo.paused && paused) {
+				mirrorvideo.pause();
+			}
+		}
+		mirrorbtn.onclick = function() {
+			if (mirror.style.display === "none") {
+				mirror.style.display = "";
+			} else {
+				mirror.style.display = "none";
+				update_mirror();
+			}
 		};
 		function render_suggestions(results) {
 			var outline = "";
@@ -179,11 +223,13 @@ body {
 					pausebtn.disabled = false;
 					forwardbtn.disabled = false;
 					reversebtn.disabled = false;
+					update_mirror(data.listing[0].ytid, data.time, data.paused);
 				} else {
 					nowplaying.style.display = "none";
 					pausebtn.disabled = true;
 					forwardbtn.disabled = true;
 					reversebtn.disabled = true;
+					update_mirror(null);
 				}
 				current_volume = data.volume;
 				vol.textContent = current_volume !== null ? current_volume : "loading";

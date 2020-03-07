@@ -10,8 +10,6 @@ stash = mqueue.Stash()
 fetcher = mqueue.Fetcher()
 volume = mqueue.Volume()
 
-index_html = pkgutil.get_data("mqueue", "index.html")
-
 try:
 	playlist_max = int(os.getenv("MZ_PLAYLIST_MAX") or "20")
 except ValueError:
@@ -23,7 +21,7 @@ class Musicazoo:
 
 	@cherrypy.expose
 	def index(self):
-		return index_html
+		return pkgutil.get_data("mqueue", "index.html")
 
 #	@cherrypy.expose
 #	def dice(self):
@@ -91,19 +89,25 @@ class Musicazoo:
 		return volume.get_volume()
 
 	@cherrypy.expose
+	@cherrypy.tools.json_out()
 	def setvolume(self, vol):
-		if self.skew(): return
+		if self.skew():
+			return "ok"
 		vol = min(volume.get_volume() + 5, int(vol))
 		try:
 			volume.set_volume(vol)
+			return "ok"
 		except ValueError:
-			pass
+			return "fail"
 
 	@cherrypy.expose
+	@cherrypy.tools.json_out()
 	def pause(self):
 		queue.pause()
+		return "ok"
 
 	@cherrypy.expose
+	@cherrypy.tools.json_out()
 	def navigate(self, rel):
 		try:
 			rel = float(rel)
@@ -136,7 +140,16 @@ class Musicazoo:
 
 cherrypy.config.update({'server.socket_port': 8000})
 
-cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION") or "/", config={"/images": {"tools.staticdir.on": True, "tools.staticdir.dir": os.path.abspath(os.path.join(os.path.dirname(__file__), "images"))}})
+cherrypy.tree.mount(Musicazoo(), os.getenv("MZ_LOCATION") or "/", config={
+	"/images": {
+		"tools.staticdir.on": True,
+		"tools.staticdir.dir": os.path.abspath(os.path.join(os.path.dirname(__file__), "images")),
+	},
+	"/video": {
+		"tools.staticdir.on": True,
+		"tools.staticdir.dir": os.path.abspath(stash.dir),
+	},
+})
 
 if __name__ == "__main__":
 	cherrypy.engine.start()
