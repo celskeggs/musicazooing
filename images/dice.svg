@@ -29,12 +29,12 @@
      inkscape:cx="6"
      inkscape:cy="6"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g3816"
      showgrid="false"
      units="px"
      inkscape:window-width="1920"
      inkscape:window-height="1025"
-     inkscape:window-x="0"
+     inkscape:window-x="4"
      inkscape:window-y="55"
      inkscape:window-maximized="0" />
   <metadata
@@ -58,49 +58,49 @@
        id="g3816"
        transform="matrix(0.46153847,0,0,0.46153847,0,159.92307)">
       <rect
-         ry="0.82804787"
-         style="stroke-width:0.27900168"
-         y="290.12082"
-         x="0"
-         height="6.8791666"
-         width="6.8791666"
+         ry="0.82120454"
+         style="fill:#ffffff;stroke:#585858;stroke-width:0.05732639;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         y="290.1492"
+         x="0.028426312"
+         height="6.8223138"
+         width="6.8223138"
          id="rect3713" />
       <circle
          r="0.66145831"
          cy="295.14792"
          cx="1.984375"
          id="path3720"
-         style="fill:#ffffff;stroke-width:0.25194132" />
+         style="fill:#000000;stroke-width:0.05732639;stroke:#585858;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
       <circle
          r="0.66145831"
          cy="295.14792"
          cx="4.8947916"
          id="path3720-3"
-         style="fill:#ffffff;stroke-width:0.25194132" />
+         style="fill:#000000;stroke-width:0.05732639;stroke:#585858;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
       <circle
          r="0.66145831"
          cy="291.9729"
          cx="1.984375"
          id="path3720-6"
-         style="fill:#ffffff;stroke-width:0.25194132" />
+         style="fill:#000000;stroke-width:0.05732639;stroke:#585858;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
       <circle
          r="0.66145831"
          cy="291.9729"
          cx="4.8947916"
          id="path3720-7"
-         style="fill:#ffffff;stroke-width:0.25194132" />
+         style="fill:#000000;stroke-width:0.05732639;stroke:#585858;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
       <circle
          r="0.66145831"
          cy="293.56039"
          cx="1.984375"
          id="path3720-5"
-         style="fill:#ffffff;stroke-width:0.25194132" />
+         style="fill:#000000;stroke-width:0.05732639;stroke:#585858;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
       <circle
          r="0.66145831"
          cy="293.56039"
          cx="4.8947916"
          id="path3720-5-3"
-         style="fill:#ffffff;stroke-width:0.25194132" />
+         style="fill:#000000;stroke-width:0.05732639;stroke:#585858;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
     </g>
   </g>
 </svg>
