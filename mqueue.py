@@ -267,7 +267,7 @@ class Fetcher:
 
 class Volume:
 	def __init__(self):
-		self.scale = 0.8
+		self.scale = 0.4
 
 	def raw_get_volume(self):
 		try:
